@@ -1,4 +1,3 @@
-python
 name: Render and Publish Quarto Website
 
 on:
