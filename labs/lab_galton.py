@@ -4,7 +4,7 @@ import time
 
 st.set_page_config(page_title="Galton Board", layout="centered")
 
-st.title("🏗️ Galton Board Ultra-Fluida")
+st.title("🏗️ Galton Board")
 st.markdown("La pallina, in ogni slot, ha il 50% di andare a destra e il 50% di andare a sinistra")
 
 # --- CONFIGURAZIONE ---
