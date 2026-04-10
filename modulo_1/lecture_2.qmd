@@ -1,0 +1,19 @@
+---
+
+### 4. `modulo_1/lecture_2.qmd` (Il ponte verso la Statistica)
+
+```markdown
+---
+title: "Lecture 2: La Legge dei Grandi Numeri"
+---
+
+## Perché la simulazione funziona?
+Nella lezione precedente abbiamo visto che la stima di $\pi$ migliora all'aumentare dei punti. Questo non è un caso, è la **Legge dei Grandi Numeri (LLN)**.
+
+### Definizione
+La LLN garantisce che la media campionaria $\bar{X}_n$ converga al valore atteso $\mu$ per $n \to \infty$.
+
+> "Il disordine, su larga scala, genera un ordine sorprendente."
+
+### Cosa osservare nel laboratorio
+Se imposti pochi punti, la stima "salta" (alta varianza). Se ne imposti molti, l'errore si schiaccia verso lo zero.
