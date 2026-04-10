@@ -10,6 +10,7 @@ La LLN garantisce che la media campionaria $\bar{X}_n$ converga al valore atteso
 
 ### Cosa osservare nel laboratorio
 Se imposti pochi punti, la stima "salta" (alta varianza). Se ne imposti molti, l'errore si schiaccia verso lo zero.
+
 ::: {.callout-tip}
 ## Prova tu stesso!
 [**Apri il Laboratorio Interattivo**](https://labmontecarlopy-kruikwaz6izuyclpm7zskm.streamlit.app/)
