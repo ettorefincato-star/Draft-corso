@@ -30,3 +30,4 @@ def stima_pi(n):
     dist = x**2 + y**2
     dentro = np.sum(dist <= 1)
     return 4 * dentro / n
+```
