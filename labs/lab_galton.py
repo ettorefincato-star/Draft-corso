@@ -1,45 +1,28 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
+import time
 
-st.set_page_config(page_title="Galton Board Fluida", layout="wide")
+st.set_page_config(page_title="Galton Board Reale", layout="wide")
 
-st.title("🏗️ Galton Board Professionale")
-st.markdown("Le palline cadono attraverso i pioli (punti grigi) per formare la Distribuzione Normale.")
+st.title("🏗️ Galton Board: Simulazione Fisica")
 
-# --- PARAMETRI ---
+# --- PARAMETRI FISSI ---
 n_layers = 10
-n_balls = st.sidebar.slider("Numero di palline", 10, 100, 30)
+columns = np.arange(-n_layers/2, n_layers/2 + 1, 1)
 
-# --- GENERAZIONE COORDINATE DI CADUTA ---
-frames = []
-all_paths_x = [ [0.0] for _ in range(n_balls) ]
-all_paths_y = [ [float(n_layers + 1)] for _ in range(n_balls) ]
+# --- SIDEBAR CONTROLLI ---
+with st.sidebar:
+    n_balls = st.slider("Numero di palline", 10, 200, 50)
+    speed = st.slider("Velocità caduta", 0.01, 0.5, 0.1)
+    run = st.button("Lancia Palline")
 
-for b in range(n_balls):
-    curr_x = 0.0
-    for l in range(n_layers, 0, -1):
-        curr_x += np.random.choice([-0.5, 0.5])
-        all_paths_x[b].append(curr_x)
-        all_paths_y[b].append(float(l))
-    # Punto finale nel canale
-    all_paths_x[b].append(curr_x)
-    all_paths_y[b].append(-0.5)
+# Inizializzazione risultati nel browser
+if 'final_counts' not in st.session_state:
+    st.session_state.final_counts = {col: 0 for col in columns}
 
-# --- CREAZIONE DEI FRAME ---
-max_steps = n_layers + 2
-for s in range(max_steps + 1):
-    current_x = [path[min(s, len(path)-1)] for path in all_paths_x]
-    current_y = [path[min(s, len(path)-1)] for path in all_paths_y]
-    
-    frames.append(go.Frame(
-        data=[go.Scatter(x=current_x, y=current_y, mode='markers', 
-                         marker=dict(color='red', size=12))],
-        name=f'frame{s}'
-    ))
-
-# --- COSTRUZIONE LAYOUT (Pioli fissi) ---
-# Creiamo i pioli come "scatter" nel dato iniziale che non viene rimosso
+# --- GENERAZIONE PIOLI ---
 pegs_x = []
 pegs_y = []
 for r in range(1, n_layers + 1):
@@ -47,34 +30,62 @@ for r in range(1, n_layers + 1):
     pegs_x.extend(row)
     pegs_y.extend([r] * len(row))
 
-fig = go.Figure(
-    data=[
-        # Traccia 0: Le palline (animate)
-        go.Scatter(x=[0]*n_balls, y=[n_layers+1]*n_balls, mode='markers',
-                   marker=dict(color='red', size=12), name="Palline"),
-        # Traccia 1: I pioli (fissi)
-        go.Scatter(x=pegs_x, y=pegs_y, mode='markers', 
-                   marker=dict(color='darkgray', size=8), hoverinfo='skip', name="Pioli")
-    ],
-    layout=go.Layout(
-        xaxis=dict(range=[-n_layers/2 - 2, n_layers/2 + 2], showgrid=False, zeroline=False, fixedrange=True),
-        yaxis=dict(range=[-1, n_layers + 2], showgrid=False, zeroline=False, fixedrange=True),
-        height=700,
-        template="plotly_white",
-        updatemenus=[{
-            "type": "buttons",
-            "buttons": [{
-                "label": "▶ Lancia Palline",
-                "method": "animate",
-                "args": [None, {"frame": {"duration": 300, "redraw": True}, "fromcurrent": True}]
-            }]
-        }]
-    ),
-    frames=frames
-)
+# --- AREA DI DISEGNO ---
+plot_spot = st.empty()
 
-# Aggiunta visiva dei canali alla base
-for x in np.arange(-n_layers/2, n_layers/2 + 1, 1):
-    fig.add_shape(type="line", x0=x, y0=-0.8, x1=x, y1=0.2, line=dict(color="lightgray", width=1))
+def draw_board(current_ball_x=None, current_ball_y=None):
+    fig = go.Figure()
 
-st.plotly_chart(fig, use_container_width=True)
+    # 1. I Pioli (Grigi)
+    fig.add_trace(go.Scatter(x=pegs_x, y=pegs_y, mode='markers', 
+                             marker=dict(color='lightgray', size=10), showlegend=False))
+
+    # 2. L'Istogramma (Barre Blu in basso)
+    fig.add_trace(go.Bar(x=list(st.session_state.final_counts.keys()), 
+                         y=list(st.session_state.final_counts.values()),
+                         marker_color='rgba(0, 0, 255, 0.5)', name="Accumulo"))
+
+    # 3. La Pallina Attuale (Rossa)
+    if current_ball_x is not None:
+        fig.add_trace(go.Scatter(x=[current_ball_x], y=[current_ball_y], mode='markers',
+                                 marker=dict(color='red', size=15), showlegend=False))
+
+    fig.update_layout(
+        xaxis=dict(range=[-n_layers/2 - 1, n_layers/2 + 1], fixedrange=True, showgrid=False, zeroline=False),
+        yaxis=dict(range=[-2, n_layers + 2], fixedrange=True, showgrid=False, zeroline=False),
+        height=600, template="plotly_white", showlegend=False,
+        margin=dict(l=20, r=20, t=20, b=20)
+    )
+    return fig
+
+# --- LOGICA DI CADUTA ---
+if run:
+    # Reset conteggi per nuova simulazione
+    st.session_state.final_counts = {col: 0 for col in columns}
+    
+    for b in range(n_balls):
+        curr_x = 0.0
+        # La pallina scende livello per livello
+        for curr_y in range(n_layers + 1, 0, -1):
+            # Disegniamo la pallina in questa posizione
+            plot_spot.plotly_chart(draw_board(curr_x, curr_y), use_container_width=True)
+            time.sleep(speed / 2)
+            
+            # Se tocca un piolo (y intero tra 1 e n_layers)
+            if 1 <= curr_y <= n_layers:
+                # Rimbalzo: cambia direzione SOLO qui
+                move = np.random.choice([-0.5, 0.5])
+                curr_x += move
+        
+        # Arrivo al suolo (y=0)
+        # Troviamo la colonna più vicina (canale)
+        final_col = min(columns, key=lambda x:abs(x-curr_x))
+        st.session_state.final_counts[final_col] += 1
+        
+        # Aggiornamento finale per questa pallina
+        plot_spot.plotly_chart(draw_board(curr_x, 0), use_container_width=True)
+        time.sleep(speed / 4)
+
+else:
+    # Stato iniziale
+    plot_spot.plotly_chart(draw_board(), use_container_width=True)
