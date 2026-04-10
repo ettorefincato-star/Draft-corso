@@ -1,0 +1,32 @@
+---
+title: "Lecture 1: Il Metodo Monte Carlo"
+---
+
+## Il Caso come Strumento
+Il metodo Monte Carlo permette di risolvere problemi deterministici usando il campionamento probabilistico.
+
+### Geometria e Pi
+Consideriamo un cerchio inscritto in un quadrato. Il rapporto tra l'area del cerchio ($A_c$) e quella del quadrato ($A_q$) è:
+
+$$\frac{A_c}{A_q} = \frac{\pi r^2}{(2r)^2} = \frac{\pi}{4}$$
+
+Se lanciamo $N$ punti casuali, la frazione di punti che cade nel cerchio approssimerà $\pi/4$.
+
+::: {.callout-tip}
+## Prova tu stesso!
+Abbiamo preparato un laboratorio interattivo per visualizzare questa simulazione:
+[**Apri il Laboratorio Interattivo**](https://tuo-corso.streamlit.app/lab_montecarlo)
+:::
+
+## Il Codice della Simulazione
+Ecco la logica semplificata in Python:
+
+```python
+import numpy as np
+
+def stima_pi(n):
+    x = np.random.uniform(0, 1, n)
+    y = np.random.uniform(0, 1, n)
+    dist = x**2 + y**2
+    dentro = np.sum(dist <= 1)
+    return 4 * dentro / n
