@@ -3,324 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galton Board Simulation</title>
+    <title>Vera Galton Board</title>
     <style>
         :root {
-            --bg-color: #f4f7f6;
-            --peg-color: #7f8c8d;
+            --bg-color: #ffffff;
+            --peg-color: #bdc3c7;
             --ball-color: #e74c3c;
             --bar-color: #3498db;
-            --text-color: #2c3e50;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
-
-        .galton-container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-launch {
-            background-color: var(--ball-color);
-            color: white;
-        }
-
-        .btn-launch:hover {
-            background-color: #c0392b;
-        }
-
-        .btn-reset {
-            background-color: #95a5a6;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background-color: #7f8c8d;
-        }
-
-        .canvas-wrapper {
-            position: relative;
-            width: 100%;
-            padding-bottom: 125%; /* Aspect Ratio 4:5 */
-            height: 0;
-            overflow: hidden;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            background-color: #fff;
-        }
-
-        #galtonCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
+        body { font-family: sans-serif; margin: 0; display: flex; justify-content: center; background: var(--bg-color); }
+        .container { width: 100%; max-width: 600px; text-align: center; padding: 10px; }
+        .controls { margin-bottom: 15px; }
+        button { padding: 10px 20px; cursor: pointer; border-radius: 5px; border: none; background: #2c3e50; color: white; font-weight: bold; }
+        button:hover { background: #34495e; }
+        canvas { border: 1px solid #eee; border-radius: 8px; background: #fff; max-width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="galton-container">
-    <h2>La Galton Board</h2>
-    <p>Guarda le palline cadere e formare una Distribuzione Binomiale.</p>
-    
+<div class="container">
     <div class="controls">
-        <button class="btn-launch" onclick="launchBall()">▶ Lancia Pallina</button>
-        <button class="btn-reset" onclick="resetSim()">🔄 Reset</button>
+        <button onclick="launchBall()">▶ Lancia Pallina</button>
+        <button onclick="launchMany(10)">+10 Palline</button>
+        <button onclick="resetSim()" style="background:#95a5a6">Reset</button>
     </div>
-
-    <div class="canvas-wrapper">
-        <canvas id="galtonCanvas"></canvas>
-    </div>
+    <canvas id="galtonCanvas"></canvas>
 </div>
 
 <script>
-    // --- Configurazione della Simulazione ---
-    const config = {
-        rows: 12,            // Livelli di pioli
-        pegRadius: 4,        // Dimensione pioli
-        ballRadius: 7,       // Dimensione pallina
-        gravity: 0.25,       // Forza di gravità
-        elasticity: 0.6,    // Rimbalzo (0-1)
-        friction: 0.99       // Attrito dell'aria (0-1)
-    };
-
     const canvas = document.getElementById('galtonCanvas');
     const ctx = canvas.getContext('2d');
+
+    const config = {
+        layers: 10,        // Numero di file di pioli
+        ballRadius: 6,
+        pegRadius: 3,
+        gravity: 0.2,
+        damping: 0.5,      // Rimbalzo
+        spacing: 40        // Spazio tra i pioli
+    };
+
     let width, height;
     let pegs = [];
     let balls = [];
-    let buckets = [];
-    let animationId;
+    let bins = new Array(config.layers + 1).fill(0);
 
-    // --- Inizializzazione ---
     function init() {
-        // Rendi il canvas responsive prendendo le dimensioni dal wrapper CSS
-        const wrapper = canvas.parentElement;
-        width = canvas.width = wrapper.offsetWidth;
-        height = canvas.height = wrapper.offsetHeight;
-
+        width = canvas.width = 500;
+        height = canvas.height = 650;
         createPegs();
-        createBuckets();
-        startAnimation();
+        draw();
     }
 
-    // --- Creazione degli Oggetti ---
     function createPegs() {
         pegs = [];
-        const startY = height * 0.1;
-        const endY = height * 0.7;
-        const rowHeight = (endY - startY) / config.rows;
-        
-        for (let r = 0; r < config.rows; r++) {
-            const y = startY + r * rowHeight;
-            const cols = r + 1;
-            const rowWidth = width * 0.8;
-            const startX = (width - rowWidth) / 2;
-            const colWidth = rowWidth / cols;
-
-            for (let c = 0; c < cols; c++) {
-                pegs.push({
-                    x: startX + c * colWidth + colWidth / 2,
-                    y: y,
-                    r: config.pegRadius
-                });
+        const startY = 80;
+        for (let i = 0; i < config.layers; i++) {
+            const rowY = startY + i * config.spacing;
+            const rowXStart = width / 2 - (i * config.spacing) / 2;
+            for (let j = 0; j <= i; j++) {
+                pegs.push({ x: rowXStart + j * config.spacing, y: rowY });
             }
         }
     }
 
-    function createBuckets() {
-        buckets = new Array(config.rows + 1).fill(0);
-    }
-
-    // --- Logica della Pallina ---
     class Ball {
         constructor() {
-            this.x = width / 2 + (Math.random() - 0.5) * 5; // Piccolo offset casuale in cima
-            this.y = height * 0.05;
-            this.vx = (Math.random() - 0.5) * 1; // Velocità orizzontale iniziale casuale
+            this.x = width / 2 + (Math.random() - 0.5); // Quasi perfettamente al centro
+            this.y = 30;
+            this.vx = 0;
             this.vy = 0;
-            this.r = config.ballRadius;
-            this.isFinished = false;
+            this.settled = false;
         }
 
         update() {
-            if (this.isFinished) return;
+            if (this.settled) return;
 
-            // Applica gravità e attrito
             this.vy += config.gravity;
-            this.vx *= config.friction;
-            this.vy *= config.friction;
-
-            // Aggiorna posizione
             this.x += this.vx;
             this.y += this.vy;
 
             // Collisione con i pioli
-            for (let peg of pegs) {
+            pegs.forEach(peg => {
                 const dx = this.x - peg.x;
                 const dy = this.y - peg.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
-
-                if (dist < this.r + peg.r) {
-                    // Risolvi compenetrazione
-                    const overlap = (this.r + peg.r - dist);
-                    const nx = dx / dist; // Vettore normale
-                    const ny = dy / dist;
-                    this.x += nx * overlap;
-                    this.y += ny * overlap;
-
-                    // Calcola rimbalzo (riflessione del vettore velocità)
-                    const dotProduct = this.vx * nx + this.vy * ny;
-                    this.vx = (this.vx - 2 * dotProduct * nx) * config.elasticity;
-                    this.vy = (this.vy - 2 * dotProduct * ny) * config.elasticity;
-
-                    // Aggiungi un bias casuale per forzare destra/sinistra (cruciale per Galton)
-                    this.vx += (Math.random() - 0.5) * 0.5;
+                if (dist < config.ballRadius + config.pegRadius) {
+                    const angle = Math.atan2(dy, dx);
+                    // Forza il rimbalzo verso il basso e di lato
+                    this.vx += Math.cos(angle) * 2 + (Math.random() - 0.5) * 0.5;
+                    this.vy = Math.abs(Math.sin(angle)) * 2 + 1; 
+                    // Sposta la pallina fuori dal piolo per evitare incastri
+                    this.x = peg.x + Math.cos(angle) * (config.ballRadius + config.pegRadius);
+                    this.y = peg.y + Math.sin(angle) * (config.ballRadius + config.pegRadius);
                 }
-            }
+            });
 
-            // Collisione con i muri laterali
-            if (this.x < this.r) {
-                this.x = this.r;
-                this.vx *= -0.5;
-            } else if (this.x > width - this.r) {
-                this.x = width - this.r;
-                this.vx *= -0.5;
-            }
-
-            // Arrivo nei canali in basso
-            const floorY = height * 0.75;
-            if (this.y > floorY && !this.isFinished) {
-                this.isFinished = true;
-                const bucketWidth = (width * 0.8) / (config.rows + 1);
-                const startX = width * 0.1;
-                const index = Math.floor((this.x - startX) / bucketWidth);
-                const safeIndex = Math.max(0, Math.min(config.rows, index));
-                buckets[safeIndex]++;
-                
-                // Rimuovi la pallina dopo un po' per pulizia (opzionale)
-                setTimeout(() => {
-                    balls = balls.filter(b => b !== this);
-                }, 500);
+            // Arrivo in fondo
+            const binAreaY = 80 + config.layers * config.spacing + 20;
+            if (this.y > binAreaY) {
+                this.settled = true;
+                const binWidth = config.spacing;
+                const binIndex = Math.round((this.x - (width / 2 - (config.layers * binWidth) / 2)) / binWidth);
+                const safeIndex = Math.max(0, Math.min(config.layers, binIndex));
+                bins[safeIndex]++;
             }
         }
 
         draw() {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ball-color');
+            ctx.arc(this.x, this.y, config.ballRadius, 0, Math.PI*2);
+            ctx.fillStyle = "#e74c3c";
             ctx.fill();
             ctx.closePath();
         }
     }
 
-    // --- Rendering ---
     function draw() {
-        ctx.clearRect(0, 0, width, height); // Pulisci canvas
-
-        // Disegna Istogramma (sfondo dei canali)
-        const bucketWidth = (width * 0.8) / (config.rows + 1);
-        const startX = width * 0.1;
-        const floorY = height * 0.75;
-        const maxBucketHeight = height * 0.23;
-        const maxCount = Math.max(...buckets, 1);
-
-        for (let i = 0; i < buckets.length; i++) {
-            const count = buckets[i];
-            const barHeight = (count / maxCount) * maxBucketHeight;
-            const x = startX + i * bucketWidth;
-            
-            // Colore barra
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bar-color') + "80"; // 50% opacity
-            ctx.fillRect(x + 2, floorY - barHeight, bucketWidth - 4, barHeight);
-            
-            // Linee di divisione canali
-            ctx.strokeStyle = "#ddd";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x, floorY - maxBucketHeight, bucketWidth, maxBucketHeight);
-        }
+        ctx.clearRect(0, 0, width, height);
 
         // Disegna Pioli
-        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--peg-color');
-        for (let peg of pegs) {
+        ctx.fillStyle = "#bdc3c7";
+        pegs.forEach(peg => {
             ctx.beginPath();
-            ctx.arc(peg.x, peg.y, peg.r, 0, Math.PI * 2);
+            ctx.arc(peg.x, peg.y, config.pegRadius, 0, Math.PI*2);
             ctx.fill();
-            ctx.closePath();
+        });
+
+        // Disegna Istogramma (Canali)
+        const binWidth = config.spacing;
+        const startX = width / 2 - (config.layers * binWidth) / 2;
+        const baseY = height - 20;
+
+        for (let i = 0; i <= config.layers; i++) {
+            const h = bins[i] * 10; // Altezza barra
+            ctx.fillStyle = "#3498db";
+            ctx.fillRect(startX + i * binWidth - binWidth/4, baseY - h, binWidth/2, h);
+            
+            // Disegna linee canali
+            ctx.strokeStyle = "#eee";
+            ctx.strokeRect(startX + i * binWidth - binWidth/2, baseY - 150, binWidth, 150);
         }
 
-        // Disegna e aggiorna Palline
-        for (let ball of balls) {
+        // Aggiorna e disegna palline
+        balls.forEach((ball, index) => {
             ball.update();
             ball.draw();
-        }
+            if (ball.settled && ball.y > height + 100) balls.splice(index, 1);
+        });
 
-        animationId = requestAnimationFrame(draw);
+        requestAnimationFrame(draw);
     }
 
-    // --- Controlli ---
-    function startAnimation() {
-        if (!animationId) {
-            draw();
-        }
-    }
+    function launchBall() { balls.push(new Ball()); }
+    function launchMany(n) { for(let i=0; i<n; i++) setTimeout(launchBall, i*100); }
+    function resetSim() { bins.fill(0); balls = []; }
 
-    function launchBall() {
-        if (balls.length < 50) { // Limite per performance
-            balls.push(new Ball());
-        }
-    }
-
-    function resetSim() {
-        balls = [];
-        createBuckets();
-    }
-
-    // Gestione ridimensionamento finestra
-    window.addEventListener('resize', init);
-
-    // Avvio
     init();
-
 </script>
-
 </body>
 </html>
