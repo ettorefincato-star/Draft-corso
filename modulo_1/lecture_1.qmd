@@ -18,6 +18,9 @@ Abbiamo preparato un laboratorio interattivo per visualizzare questa simulazione
 [**Apri il Laboratorio Interattivo**](https://labmontecarlopy-kruikwaz6izuyclpm7zskm.streamlit.app/)
 :::
 
+## Con html
+ (probabilmente soluzione migliore rispetto a streamlit per visualizzare le simulazioni (ma no codice Python))
+<iframe src="montecarlo_pi.html" width="100%" height="800px" style="border:none;"></iframe>
 ## Codice base
 Ecco la logica semplificata in Python:
 
