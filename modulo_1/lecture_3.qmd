@@ -1,0 +1,15 @@
+---
+title: "Lecture 3: L'Ordine nel Caos (La Galton Board)"
+---
+
+## Il Disordine che crea Forma
+Nelle lezioni precedenti abbiamo visto singoli eventi casuali. Ma cosa succede quando migliaia di eventi casuali si sommano? 
+
+Immaginiamo una pallina che cade e incontra un piolo: ha il 50% di probabilità di andare a destra e il 50% a sinistra. Se mettiamo molti strati di pioli, la pallina compirà un "cammino casuale".
+
+### La Scoperta di Sir Francis Galton
+Galton ideò una macchina (la *Galton Board*) per dimostrare che, nonostante ogni singola pallina si muova a caso, la massa totale delle palline seguirà sempre una distribuzione specifica.
+
+
+## Laboratorio Interattivo
+Usa il simulatore qui sotto. Aumenta il numero di palline e osserva come i dati si distribuiscono a campana
