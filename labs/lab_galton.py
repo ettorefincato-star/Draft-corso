@@ -5,7 +5,7 @@ import time
 st.set_page_config(page_title="Galton Board", layout="centered")
 
 st.title("🏗️ Galton Board Ultra-Fluida")
-st.markdown("Questa versione elimina il lampeggio usando rendering testuale dinamico.")
+st.markdown("La pallina, in ogni slot, ha il 50% di andare a destra e il 50% di andare a sinistra")
 
 # --- CONFIGURAZIONE ---
 n_layers = 10
