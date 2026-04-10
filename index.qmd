@@ -1,0 +1,14 @@
+---
+title: "Benvenuti nell'Architettura del Caso"
+---
+
+## Dalla simulazione all'intelligenza dei dati
+Questo corso introduce alla statistica e al machine learning attraverso la potenza del calcolo computazionale. 
+
+### Perché questo approccio?
+Invece di memorizzare formule astratte, useremo i **Metodi Monte Carlo** per "vedere" la probabilità in azione. Imparerete a:
+1. **Simulare** l'incertezza.
+2. **Validare** i dati senza dipendere da assunzioni rigide.
+3. **Costruire** modelli predittivi duraturi.
+
+[Vai alla Lecture 1: La Genesi del Caso](modulo_1/lecture_1.qmd)
