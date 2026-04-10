@@ -15,7 +15,7 @@ if 'counts' not in st.session_state:
     st.session_state.counts = [0] * (n_layers + 1)
 
 with st.sidebar:
-    n_balls = st.slider("Palline", 1, 100, 20)
+    n_balls = st.slider("Palline", 1, 300, 20)
     speed = st.slider("Velocità", 0.01, 0.5, 0.1)
     run = st.button("Lancia!")
 
