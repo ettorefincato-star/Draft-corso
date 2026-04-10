@@ -1,9 +1,4 @@
 ---
-
-### 4. `modulo_1/lecture_2.qmd` (Il ponte verso la Statistica)
-
-```markdown
----
 title: "Lecture 2: La Legge dei Grandi Numeri"
 ---
 
