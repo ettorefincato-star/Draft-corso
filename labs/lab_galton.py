@@ -1,116 +1,84 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import altair as alt
+import plotly.express as px
+import plotly.graph_objects as go
 import time
 
-st.set_page_config(page_title="Galton Board Fisica", layout="wide")
+st.set_page_config(page_title="Galton Board Realistica", layout="wide")
 
-st.title("🏗️ Galton Board: Simulazione Fisica")
-st.markdown("Osserva le palline cadere e rimbalzare sui pioli. Guarda come si accumulano naturalmente formando una campana.")
+st.title("🏗️ Galton Board: La Campana in Movimento")
+st.markdown("Se le palline sembrano ferme, clicca 'Lancia'. Ognuna segue un percorso casuale unico.")
 
-# Sidebar per i controlli
+# --- CONFIGURAZIONE ---
+n_layers = 10
+if 'results' not in st.session_state:
+    st.session_state.results = []
+
 with st.sidebar:
-    st.header("Configurazione")
-    n_balls_per_sim = st.slider("Palline per simulazione", 10, 100, 50)
-    n_layers = st.slider("Numero di livelli di pioli", 5, 15, 10)
-    speed = st.slider("Velocità di caduta", 0.01, 0.2, 0.05)
-    
+    n_balls = st.number_input("Quante palline lanciare?", min_value=1, max_value=100, value=10)
+    speed = st.slider("Lentezza caduta", 0.01, 0.2, 0.05)
     if st.button("Lancia le palline!"):
-        st.session_state.run_physics = True
+        st.session_state.run = True
     else:
-        if 'run_physics' not in st.session_state:
-            st.session_state.run_physics = False
+        st.session_state.run = False
 
-# AREA DELLA SIMULAZIONE FISICA
+# --- FUNZIONE PER GENERARE UN PERCORSO FLUIDO ---
+def generate_smooth_path(layers):
+    x = [0.0]
+    y = [layers + 1.0]
+    curr_x = 0.0
+    for i in range(layers, 0, -1):
+        # Decisione: destra o sinistra
+        step = np.random.choice([-0.5, 0.5])
+        curr_x += step
+        # Aggiungiamo punti intermedi per rendere la caduta fluida
+        x.extend([x[-1], curr_x]) 
+        y.extend([i + 0.5, i])
+    x.append(curr_x)
+    y.append(0)
+    return x, y, curr_x
+
+# --- AREA VISIVA ---
 placeholder = st.empty()
 
-# Generazione della griglia dei pioli (statica)
-pegs = []
-for y in range(1, n_layers + 1):
-    row_x = np.arange(-y/2, y/2 + 1, 1)
-    for x in row_x:
-        pegs.append({'x': x, 'y': y, 'type': 'peg'})
-df_pegs = pd.DataFrame(pegs)
+# Disegno dei pioli (Pegs)
+pegs_x = []
+pegs_y = []
+for r in range(1, n_layers + 1):
+    row = np.arange(-r/2, r/2 + 1, 1)
+    pegs_x.extend(row)
+    pegs_y.extend([r] * len(row))
 
-if st.session_state.run_physics:
-    # Inizializzazione delle palline
-    balls = []
-    for _ in range(n_balls_per_sim):
-        balls.append({'x': 0, 'y': n_layers + 1, 'type': 'ball', 'vx': 0, 'vy': -1, 'stuck_prob': 0.1})
-    df_balls = pd.DataFrame(balls)
+if st.session_state.run:
+    for b in range(n_balls):
+        path_x, path_y, final_x = generate_smooth_path(n_layers)
+        st.session_state.results.append(final_x)
+        
+        # Animazione della singola pallina
+        for i in range(len(path_x)):
+            fig = go.Figure()
+            
+            # 1. Pioli
+            fig.add_trace(go.Scatter(x=pegs_x, y=pegs_y, mode='markers', 
+                                     marker=dict(color='lightgray', size=10), showlegend=False))
+            
+            # 2. Pallina che cade
+            fig.add_trace(go.Scatter(x=[path_x[i]], y=[path_y[i]], mode='markers',
+                                     marker=dict(color='red', size=18, symbol='circle'), showlegend=False))
+            
+            # 3. Istogramma dei risultati precedenti (canali in basso)
+            if len(st.session_state.results) > 0:
+                fig.add_trace(go.Histogram(x=st.session_state.results[:-1] if i < len(path_x)-1 else st.session_state.results,
+                                           nbinsx=n_layers+1, marker_color='blue', opacity=0.3, showlegend=False))
 
-    # Ciclo di animazione (passi fisici)
-    for step in range((n_layers + 2) * 5): # Numero sufficiente di passi per far cadere tutte le palline
-        # Aggiornamento fisico delle palline
-        for i, ball in df_balls.iterrows():
-            if ball['y'] > 0: # Se non è ancora nel canale finale
-                # Caduta
-                ball['x'] += ball['vx'] * speed
-                ball['y'] += ball['vy'] * speed
-                
-                # Collisione con i pioli (approssimazione)
-                peg_collision = df_pegs[(np.abs(df_pegs['x'] - ball['x']) < 0.3) & (np.abs(df_pegs['y'] - ball['y']) < 0.3)]
-                if not peg_collision.empty:
-                    # Rimbalzo casuale a destra o sinistra
-                    direction = np.random.choice([-1, 1])
-                    ball['vx'] = direction * 0.5
-                    ball['vy'] = -0.5
-                else:
-                    # Accelerazione di gravità (semplificata)
-                    ball['vy'] = -1
-                    ball['vx'] *= 0.9 # Attrito dell'aria
-
-            else: # Arrivo nel canale finale
-                ball['y'] = 0
-                ball['vx'] = 0
-                ball['vy'] = 0
-
-        # Creazione del grafico di base con Altair
-        base = alt.Chart(pd.concat([df_pegs, df_balls])).encode(
-            x=alt.X('x', scale=alt.Scale(domain=[-n_layers/2 - 1, n_layers/2 + 1]), axis=None),
-            y=alt.Y('y', scale=alt.Scale(domain=[0, n_layers + 2]), axis=None)
-        )
-
-        # Visualizzazione dei pioli (grigi)
-        chart_pegs = base.transform_filter(
-            alt.datum.type == 'peg'
-        ).mark_point(filled=True, color='gray', size=20)
-
-        # Visualizzazione delle palline (rosse)
-        chart_balls = base.transform_filter(
-            alt.datum.type == 'ball'
-        ).mark_point(filled=True, color='red', size=40)
-
-        # Combinazione e rendering
-        final_chart = alt.layer(chart_pegs, chart_balls).properties(
-            width=800,
-            height=600
-        ).configure_view(strokeWidth=0)
-
-        placeholder.altair_chart(final_chart, use_container_width=True)
-        time.sleep(speed)
+            fig.update_layout(
+                xaxis=dict(range=[-n_layers/2 - 1, n_layers/2 + 1], fixedrange=True, showgrid=False, zeroline=False),
+                yaxis=dict(range=[-1, n_layers + 2], fixedrange=True, showgrid=False, zeroline=False),
+                height=600, template="plotly_white"
+            )
+            
+            placeholder.plotly_chart(fig, use_container_width=True)
+            time.sleep(speed)
     
-    st.session_state.run_physics = False
-    st.success(f"Simulazione completata!")
-
-else:
-    # Mostra solo i pioli e le palline ferme in alto
-    chart_pegs = alt.Chart(df_pegs).mark_point(filled=True, color='gray', size=20).encode(
-        x=alt.X('x', scale=alt.Scale(domain=[-n_layers/2 - 1, n_layers/2 + 1]), axis=None),
-        y=alt.Y('y', scale=alt.Scale(domain=[0, n_layers + 2]), axis=None)
-    )
-    
-    # Palline ferme in alto
-    df_initial_balls = pd.DataFrame([{'x': 0, 'y': n_layers + 1, 'type': 'ball'}])
-    chart_balls = alt.Chart(df_initial_balls).mark_point(filled=True, color='red', size=40).encode(
-        x='x', y='y'
-    )
-    
-    final_chart = alt.layer(chart_pegs, chart_balls).properties(
-        width=800,
-        height=600
-    ).configure_view(strokeWidth=0)
-    
-    placeholder.altair_chart(final_chart, use_container_width=True)
-    st.info("Configura il numero di palline nella barra laterale e clicca su 'Lancia le palline!'")
+    st.session_state.run = False
