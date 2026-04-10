@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import time
 
-st.set_page_config(page_title="Galton Board Fluida", layout="centered")
+st.set_page_config(page_title="Galton Board", layout="centered")
 
 st.title("🏗️ Galton Board Ultra-Fluida")
 st.markdown("Questa versione elimina il lampeggio usando rendering testuale dinamico.")
@@ -24,22 +24,42 @@ board_spot = st.empty()
 hist_spot = st.empty()
 
 def render_board(ball_pos=None, layer=None):
-    board_html = "<div style='font-family: monospace; text-align: center; line-height: 1.2; font-size: 20px;'>"
+    # CSS per centrare perfettamente ogni riga e definire la dimensione dei cerchi
+    board_html = """
+    <style>
+        .galton-container {
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .galton-row {
+            display: flex;
+            justify-content: center;
+            height: 30px;
+            margin-bottom: 5px;
+        }
+        .cell {
+            width: 35px;
+            text-align: center;
+            font-size: 25px;
+        }
+    </style>
+    <div class='galton-container'>
+    """
     
     for l in range(n_layers + 1):
-        # Disegniamo i pioli
-        row_content = ""
-        # Spazi iniziali per centrare la piramide
-        row_content += "&nbsp;" * (n_layers - l)
-        
+        board_html += "<div class='galton-row'>"
         for i in range(l + 1):
             if ball_pos == i and layer == l:
-                row_content += "🔴" # La pallina
+                content = "🔴" # La pallina
             else:
-                row_content += "⚪" # Il piolo
-            row_content += "&nbsp;"
-        
-        board_html += row_content + "<br>"
+                content = "⚪" # Il piolo
+            board_html += f"<div class='cell'>{content}</div>"
+        board_html += "</div>"
     
     board_html += "</div>"
     return board_html
