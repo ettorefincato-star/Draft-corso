@@ -2,7 +2,7 @@
 title: "Lecture 1: Il Metodo Monte Carlo"
 ---
 
-## Il Caso come Strumento
+## La variabilità come strumento
 Il metodo Monte Carlo permette di risolvere problemi deterministici usando il campionamento probabilistico.
 
 ### Geometria e Pi
@@ -18,7 +18,7 @@ Abbiamo preparato un laboratorio interattivo per visualizzare questa simulazione
 [**Apri il Laboratorio Interattivo**](https://labmontecarlopy-kruikwaz6izuyclpm7zskm.streamlit.app/)
 :::
 
-## Il Codice della Simulazione
+## Codice base
 Ecco la logica semplificata in Python:
 
 ```python
