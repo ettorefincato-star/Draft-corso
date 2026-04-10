@@ -3,161 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vera Galton Board</title>
+    <title>Galton Board Matematica</title>
     <style>
         :root {
-            --bg-color: #ffffff;
-            --peg-color: #bdc3c7;
-            --ball-color: #e74c3c;
-            --bar-color: #3498db;
+            --primary: #2c3e50;
+            --accent: #e74c3c;
+            --bar: #3498db;
+            --peg: #bdc3c7;
         }
-        body { font-family: sans-serif; margin: 0; display: flex; justify-content: center; background: var(--bg-color); }
-        .container { width: 100%; max-width: 600px; text-align: center; padding: 10px; }
-        .controls { margin-bottom: 15px; }
-        button { padding: 10px 20px; cursor: pointer; border-radius: 5px; border: none; background: #2c3e50; color: white; font-weight: bold; }
-        button:hover { background: #34495e; }
-        canvas { border: 1px solid #eee; border-radius: 8px; background: #fff; max-width: 100%; }
+        body { 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: #fff; 
+            color: var(--primary);
+        }
+        .controls { 
+            margin: 20px 0; 
+            display: flex; 
+            gap: 10px; 
+        }
+        button { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 8px; 
+            background: var(--primary); 
+            color: white; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.95); }
+        .btn-reset { background: #95a5a6; }
+        canvas { 
+            background: #fdfdfd; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            max-width: 100%;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="controls">
-        <button onclick="launchBall()">▶ Lancia Pallina</button>
-        <button onclick="launchMany(10)">+10 Palline</button>
-        <button onclick="resetSim()" style="background:#95a5a6">Reset</button>
-    </div>
-    <canvas id="galtonCanvas"></canvas>
+<div class="controls">
+    <button onclick="launchBall()">Lancia Pallina</button>
+    <button onclick="launchBatch(20)">Lancia 20x</button>
+    <button class="btn-reset" onclick="resetSim()">Reset</button>
 </div>
+
+<canvas id="galtonCanvas"></canvas>
 
 <script>
     const canvas = document.getElementById('galtonCanvas');
     const ctx = canvas.getContext('2d');
 
-    const config = {
-        layers: 10,        // Numero di file di pioli
-        ballRadius: 6,
-        pegRadius: 3,
-        gravity: 0.2,
-        damping: 0.5,      // Rimbalzo
-        spacing: 40        // Spazio tra i pioli
+    const params = {
+        rows: 10,           // Righe di pioli (n)
+        spacingX: 45,       // Distanza orizzontale
+        spacingY: 45,       // Distanza verticale
+        pegR: 3,            // Raggio piolo
+        ballR: 6,           // Raggio pallina
+        gravity: 0.25,      // Forza di gravità
+        friction: 0.99      // Attrito
     };
 
-    let width, height;
     let pegs = [];
     let balls = [];
-    let bins = new Array(config.layers + 1).fill(0);
+    let counts = [];
 
     function init() {
-        width = canvas.width = 500;
-        height = canvas.height = 650;
+        canvas.width = 500;
+        canvas.height = 700;
+        counts = new Array(params.rows + 1).fill(0);
         createPegs();
-        draw();
+        animate();
     }
 
     function createPegs() {
         pegs = [];
-        const startY = 80;
-        for (let i = 0; i < config.layers; i++) {
-            const rowY = startY + i * config.spacing;
-            const rowXStart = width / 2 - (i * config.spacing) / 2;
-            for (let j = 0; j <= i; j++) {
-                pegs.push({ x: rowXStart + j * config.spacing, y: rowY });
+        for (let r = 0; r < params.rows; r++) {
+            const y = 100 + r * params.spacingY;
+            const startX = canvas.width / 2 - (r * params.spacingX) / 2;
+            for (let c = 0; c <= r; c++) {
+                pegs.push({ x: startX + c * params.spacingX, y: y });
             }
         }
     }
 
     class Ball {
         constructor() {
-            this.x = width / 2 + (Math.random() - 0.5); // Quasi perfettamente al centro
-            this.y = 30;
+            this.x = canvas.width / 2 + (Math.random() - 0.5); // Quasi perfettamente al centro
+            this.y = 50;
             this.vx = 0;
             this.vy = 0;
-            this.settled = false;
+            this.active = true;
         }
 
         update() {
-            if (this.settled) return;
+            if (!this.active) return;
 
-            this.vy += config.gravity;
+            this.vy += params.gravity;
+            this.vx *= params.friction;
             this.x += this.vx;
             this.y += this.vy;
 
-            // Collisione con i pioli
-            pegs.forEach(peg => {
-                const dx = this.x - peg.x;
-                const dy = this.y - peg.y;
+            // Collisione con i pioli (Logica di decisione binaria)
+            pegs.forEach(p => {
+                const dx = this.x - p.x;
+                const dy = this.y - p.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist < config.ballRadius + config.pegRadius) {
-                    const angle = Math.atan2(dy, dx);
-                    // Forza il rimbalzo verso il basso e di lato
-                    this.vx += Math.cos(angle) * 2 + (Math.random() - 0.5) * 0.5;
-                    this.vy = Math.abs(Math.sin(angle)) * 2 + 1; 
-                    // Sposta la pallina fuori dal piolo per evitare incastri
-                    this.x = peg.x + Math.cos(angle) * (config.ballRadius + config.pegRadius);
-                    this.y = peg.y + Math.sin(angle) * (config.ballRadius + config.pegRadius);
+                
+                if (dist < params.ballR + params.pegR) {
+                    // Sposta la pallina sopra il piolo per calcolare il rimbalzo
+                    this.y = p.y - params.pegR;
+                    this.vy *= -0.3; // Perde energia verticale
+                    
+                    // DECISIONE: se è troppo centrale, forza destra o sinistra (50/50)
+                    if (Math.abs(dx) < 1) {
+                        this.vx = (Math.random() > 0.5 ? 2 : -2);
+                    } else {
+                        this.vx = dx * 1.5; // Rimbalzo basato sulla precisione del colpo
+                    }
                 }
             });
 
-            // Arrivo in fondo
-            const binAreaY = 80 + config.layers * config.spacing + 20;
-            if (this.y > binAreaY) {
-                this.settled = true;
-                const binWidth = config.spacing;
-                const binIndex = Math.round((this.x - (width / 2 - (config.layers * binWidth) / 2)) / binWidth);
-                const safeIndex = Math.max(0, Math.min(config.layers, binIndex));
-                bins[safeIndex]++;
+            // Gestione del fondo (Canali)
+            const floorY = 100 + params.rows * params.spacingY + 30;
+            if (this.y > floorY) {
+                this.active = false;
+                const binWidth = params.spacingX;
+                const offset = canvas.width / 2 - (params.rows * binWidth) / 2;
+                let bin = Math.round((this.x - offset) / binWidth);
+                bin = Math.max(0, Math.min(params.rows, bin));
+                counts[bin]++;
             }
         }
 
         draw() {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, config.ballRadius, 0, Math.PI*2);
+            ctx.arc(this.x, this.y, params.ballR, 0, Math.PI * 2);
             ctx.fillStyle = "#e74c3c";
             ctx.fill();
             ctx.closePath();
         }
     }
 
-    function draw() {
-        ctx.clearRect(0, 0, width, height);
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Disegna Pioli
+        // 1. Disegna i Pioli (Triangolo di Pascal)
         ctx.fillStyle = "#bdc3c7";
-        pegs.forEach(peg => {
+        pegs.forEach(p => {
             ctx.beginPath();
-            ctx.arc(peg.x, peg.y, config.pegRadius, 0, Math.PI*2);
+            ctx.arc(p.x, p.y, params.pegR, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // Disegna Istogramma (Canali)
-        const binWidth = config.spacing;
-        const startX = width / 2 - (config.layers * binWidth) / 2;
-        const baseY = height - 20;
+        // 2. Disegna l'Istogramma (Distribuzione)
+        const binW = params.spacingX;
+        const startX = canvas.width / 2 - (params.rows * binW) / 2;
+        const baseY = canvas.height - 20;
 
-        for (let i = 0; i <= config.layers; i++) {
-            const h = bins[i] * 10; // Altezza barra
+        for (let i = 0; i <= params.rows; i++) {
+            const h = counts[i] * 10; // 10px per ogni pallina accumulata
             ctx.fillStyle = "#3498db";
-            ctx.fillRect(startX + i * binWidth - binWidth/4, baseY - h, binWidth/2, h);
+            ctx.fillRect(startX + i * binW - binW/3, baseY - h, (binW/3)*2, h);
             
-            // Disegna linee canali
+            // Linee canali
             ctx.strokeStyle = "#eee";
-            ctx.strokeRect(startX + i * binWidth - binWidth/2, baseY - 150, binWidth, 150);
+            ctx.strokeRect(startX + i * binW - binW/2, baseY - 200, binW, 200);
         }
 
-        // Aggiorna e disegna palline
-        balls.forEach((ball, index) => {
-            ball.update();
-            ball.draw();
-            if (ball.settled && ball.y > height + 100) balls.splice(index, 1);
+        // 3. Aggiorna palline
+        balls.forEach((b, index) => {
+            b.update();
+            b.draw();
+            if (!b.active && b.y > canvas.height + 10) balls.splice(index, 1);
         });
 
-        requestAnimationFrame(draw);
+        requestAnimationFrame(animate);
     }
 
     function launchBall() { balls.push(new Ball()); }
-    function launchMany(n) { for(let i=0; i<n; i++) setTimeout(launchBall, i*100); }
-    function resetSim() { bins.fill(0); balls = []; }
+    
+    function launchBatch(n) {
+        let i = 0;
+        const interval = setInterval(() => {
+            launchBall();
+            i++;
+            if (i >= n) clearInterval(interval);
+        }, 150);
+    }
+
+    function resetSim() {
+        counts.fill(0);
+        balls = [];
+    }
 
     init();
 </script>
