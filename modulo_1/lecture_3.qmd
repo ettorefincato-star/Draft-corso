@@ -20,4 +20,5 @@ Usa il simulatore qui sotto. Aumenta il numero di palline e osserva come i dati 
 :::
 
 ## Per una simulazione più fluida, guarda qua:
-{{< include galton_sim.html >}}
+<iframe src="galton_sim.html" width="100%" height="800px" style="border:none;"></iframe>
+
