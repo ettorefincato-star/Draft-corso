@@ -3,19 +3,12 @@ project:
   output-dir: docs
 
 website:
-  title: "L'Architettura del Caso"
-  navbar:
-    left:
-      - href: index.qmd
-        text: Home
-      - text: "Modulo 1"
-        menu:
-          - modulo_1/lecture_1.qmd
-          - modulo_1/lecture_2.qmd
+  title: "Academy Statistica"
+  sidebar:
+    contents:
+      - index.qmd
+      - modulo_1/lecture_1.qmd
 
 format:
   html:
     theme: cosmo
-    toc: true
-    code-fold: true  # Permette di nascondere/mostrare il codice
-    latex-tiny: true
