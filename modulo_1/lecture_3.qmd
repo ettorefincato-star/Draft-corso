@@ -20,5 +20,6 @@ Usa il simulatore qui sotto. Aumenta il numero di palline e osserva come i dati 
 :::
 
 ## Per una simulazione più fluida, guarda qua:
+Probabilmente non serve fare tutto il casino di Streamlit - basta creare HTMLS con simulazioni fisiche usando AI...! (Java...)
 <iframe src="galton_sim.html" width="100%" height="800px" style="border:none;"></iframe>
 
