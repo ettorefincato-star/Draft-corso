@@ -1,91 +1,77 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
 import time
 
-st.set_page_config(page_title="Galton Board Reale", layout="wide")
+st.set_page_config(page_title="Galton Board Fluida", layout="centered")
 
-st.title("🏗️ Galton Board: Simulazione Fisica")
+st.title("🏗️ Galton Board Ultra-Fluida")
+st.markdown("Questa versione elimina il lampeggio usando rendering testuale dinamico.")
 
-# --- PARAMETRI FISSI ---
+# --- CONFIGURAZIONE ---
 n_layers = 10
-columns = np.arange(-n_layers/2, n_layers/2 + 1, 1)
+columns = list(range(n_layers + 1))
 
-# --- SIDEBAR CONTROLLI ---
+if 'counts' not in st.session_state:
+    st.session_state.counts = [0] * (n_layers + 1)
+
 with st.sidebar:
-    n_balls = st.slider("Numero di palline", 10, 200, 50)
-    speed = st.slider("Velocità caduta", 0.01, 0.5, 0.1)
-    run = st.button("Lancia Palline")
+    n_balls = st.slider("Palline", 1, 100, 20)
+    speed = st.slider("Velocità", 0.01, 0.5, 0.1)
+    run = st.button("Lancia!")
 
-# Inizializzazione risultati nel browser
-if 'final_counts' not in st.session_state:
-    st.session_state.final_counts = {col: 0 for col in columns}
+# AREA DI DISEGNO PRINCIPALE
+board_spot = st.empty()
+hist_spot = st.empty()
 
-# --- GENERAZIONE PIOLI ---
-pegs_x = []
-pegs_y = []
-for r in range(1, n_layers + 1):
-    row = np.arange(-r/2, r/2 + 1, 1)
-    pegs_x.extend(row)
-    pegs_y.extend([r] * len(row))
-
-# --- AREA DI DISEGNO ---
-plot_spot = st.empty()
-
-def draw_board(current_ball_x=None, current_ball_y=None):
-    fig = go.Figure()
-
-    # 1. I Pioli (Grigi)
-    fig.add_trace(go.Scatter(x=pegs_x, y=pegs_y, mode='markers', 
-                             marker=dict(color='lightgray', size=10), showlegend=False))
-
-    # 2. L'Istogramma (Barre Blu in basso)
-    fig.add_trace(go.Bar(x=list(st.session_state.final_counts.keys()), 
-                         y=list(st.session_state.final_counts.values()),
-                         marker_color='rgba(0, 0, 255, 0.5)', name="Accumulo"))
-
-    # 3. La Pallina Attuale (Rossa)
-    if current_ball_x is not None:
-        fig.add_trace(go.Scatter(x=[current_ball_x], y=[current_ball_y], mode='markers',
-                                 marker=dict(color='red', size=15), showlegend=False))
-
-    fig.update_layout(
-        xaxis=dict(range=[-n_layers/2 - 1, n_layers/2 + 1], fixedrange=True, showgrid=False, zeroline=False),
-        yaxis=dict(range=[-2, n_layers + 2], fixedrange=True, showgrid=False, zeroline=False),
-        height=600, template="plotly_white", showlegend=False,
-        margin=dict(l=20, r=20, t=20, b=20)
-    )
-    return fig
-
-# --- LOGICA DI CADUTA ---
-if run:
-    # Reset conteggi per nuova simulazione
-    st.session_state.final_counts = {col: 0 for col in columns}
+def render_board(ball_pos=None, layer=None):
+    board_html = "<div style='font-family: monospace; text-align: center; line-height: 1.2; font-size: 20px;'>"
     
+    for l in range(n_layers + 1):
+        # Disegniamo i pioli
+        row_content = ""
+        # Spazi iniziali per centrare la piramide
+        row_content += "&nbsp;" * (n_layers - l)
+        
+        for i in range(l + 1):
+            if ball_pos == i and layer == l:
+                row_content += "🔴" # La pallina
+            else:
+                row_content += "⚪" # Il piolo
+            row_content += "&nbsp;"
+        
+        board_html += row_content + "<br>"
+    
+    board_html += "</div>"
+    return board_html
+
+def render_hist():
+    # Crea un istogramma semplice con barre colorate
+    max_c = max(st.session_state.counts) if max(st.session_state.counts) > 0 else 1
+    hist_html = "<div style='display: flex; align-items: flex-end; justify-content: center; height: 150px; padding-top: 20px;'>"
+    for c in st.session_state.counts:
+        height = (c / max_c) * 100
+        hist_html += f"<div style='background-color: #1f77b4; width: 20px; height: {height}px; margin: 2px; border-radius: 2px;'></div>"
+    hist_html += "</div>"
+    return hist_html
+
+# --- LOGICA ---
+if run:
+    st.session_state.counts = [0] * (n_layers + 1)
     for b in range(n_balls):
-        curr_x = 0.0
-        # La pallina scende livello per livello
-        for curr_y in range(n_layers + 1, 0, -1):
-            # Disegniamo la pallina in questa posizione
-            plot_spot.plotly_chart(draw_board(curr_x, curr_y), use_container_width=True)
-            time.sleep(speed / 2)
+        curr_pos = 0 # Inizia in cima (posizione 0)
+        for l in range(n_layers + 1):
+            # Mostra la pallina
+            board_spot.markdown(render_board(curr_pos, l), unsafe_allow_html=True)
+            time.sleep(speed)
             
-            # Se tocca un piolo (y intero tra 1 e n_layers)
-            if 1 <= curr_y <= n_layers:
-                # Rimbalzo: cambia direzione SOLO qui
-                move = np.random.choice([-0.5, 0.5])
-                curr_x += move
+            # Decisione per il livello successivo
+            if l < n_layers:
+                curr_pos += np.random.choice([0, 1])
         
-        # Arrivo al suolo (y=0)
-        # Troviamo la colonna più vicina (canale)
-        final_col = min(columns, key=lambda x:abs(x-curr_x))
-        st.session_state.final_counts[final_col] += 1
-        
-        # Aggiornamento finale per questa pallina
-        plot_spot.plotly_chart(draw_board(curr_x, 0), use_container_width=True)
-        time.sleep(speed / 4)
+        # Aggiorna conteggio finale
+        st.session_state.counts[curr_pos] += 1
+        hist_spot.markdown(render_hist(), unsafe_allow_html=True)
 
 else:
-    # Stato iniziale
-    plot_spot.plotly_chart(draw_board(), use_container_width=True)
+    board_spot.markdown(render_board(), unsafe_allow_html=True)
+    hist_spot.markdown(render_hist(), unsafe_allow_html=True)
