@@ -2,7 +2,11 @@ name: Render and Publish Quarto Website
 
 on:
   push:
-    branches: [ main, master ] # Si attiva quando salvi su questi rami
+    branches: [main, master]
+
+# Imposta la variabile per evitare il warning di Node.js
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-deploy:
@@ -27,7 +31,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/ # Quarto deve essere impostato per scrivere qui nel file _quarto.yml
+          # Qui puntiamo alla cartella docs che abbiamo definito in _quarto.yml
+          path: docs/
 
       - name: Deploy to GitHub Pages
         id: deployment
