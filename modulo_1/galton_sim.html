@@ -3,177 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galton Board Gaussiana</title>
+    <title>Galton Board Calibrata</title>
     <style>
         :root {
-            --bg-color: #f4f7f6;
-            --peg-color: #7f8c8d;
-            --ball-color: #e74c3c;
-            --bar-color: #3498db;
-            --text-color: #2c3e50;
+            --bg-color: #f8fafc;
+            --peg-color: #94a3b8;
+            --ball-color: #ef4444;
+            --bar-color: #3b82f6;
         }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: var(--bg-color);
-        }
-
-        .galton-container {
-            width: 95%;
-            max-width: 600px;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            background-color: var(--text-color);
-            color: white;
-            transition: opacity 0.2s;
-        }
-
-        .btn-launch { background-color: var(--ball-color); }
-        .btn-reset { background-color: #95a5a6; }
-        button:hover { opacity: 0.8; }
-
-        .canvas-wrapper {
-            position: relative;
-            width: 100%;
-            padding-bottom: 130%; 
-            height: 0;
-            border: 1px solid #eee;
-            border-radius: 8px;
-        }
-
-        #galtonCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
+        body { font-family: system-ui, sans-serif; margin: 0; display: flex; justify-content: center; background: var(--bg-color); }
+        .galton-container { width: 100%; max-width: 600px; background: white; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .controls { margin-bottom: 20px; display: flex; justify-content: center; gap: 8px; }
+        button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-l { background: var(--ball-color); color: white; }
+        .btn-r { background: #64748b; color: white; }
+        canvas { border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; height: auto; }
     </style>
 </head>
 <body>
 
 <div class="galton-container">
-    <h2>La Galton Board</h2>
-    <p>Le palline rimbalzano e formano una Distribuzione Normale (Gaussiana).</p>
-    
+    <h3>Simulazione Statistica Galton</h3>
     <div class="controls">
-        <button class="btn-launch" onclick="launchBall()">▶ Lancia 1</button>
-        <button class="btn-launch" onclick="launchBatch(15)">▶ Lancia 15</button>
-        <button class="btn-reset" onclick="resetSim()">🔄 Reset</button>
+        <button class="btn-l" onclick="launchBall()">Lancia Pallina</button>
+        <button class="btn-l" onclick="launchBatch(20)">Lancia 20x</button>
+        <button class="btn-r" onclick="resetSim()">Reset</button>
     </div>
-
-    <div class="canvas-wrapper">
-        <canvas id="galtonCanvas"></canvas>
-    </div>
+    <canvas id="galtonCanvas"></canvas>
 </div>
 
 <script>
-    const config = {
-        rows: 10,            
-        pegRadius: 3,        
-        ballRadius: 6,       
-        gravity: 0.2,        
-        elasticity: 0.4,    
-        friction: 0.98       
-    };
-
     const canvas = document.getElementById('galtonCanvas');
     const ctx = canvas.getContext('2d');
-    let width, height;
-    let pegs = [];
-    let balls = [];
-    let buckets = [];
+
+    const config = {
+        rows: 11,           
+        ballR: 5,           
+        pegR: 3,            
+        gravity: 0.2,       
+        friction: 0.96,     // Più attrito per frenare le palline laterali
+        bounce: 0.2,        // Elasticità molto bassa per evitare l'effetto flipper
+        spacingX: 48,       
+        spacingY: 42        
+    };
+
+    let width, height, pegs = [], balls = [], buckets = [];
 
     function init() {
-        const wrapper = canvas.parentElement;
-        width = canvas.width = wrapper.offsetWidth;
-        height = canvas.height = wrapper.offsetHeight;
+        width = canvas.width = 540;
+        height = canvas.height = 700;
         buckets = new Array(config.rows + 1).fill(0);
         createPegs();
-        draw();
+        animate();
     }
 
     function createPegs() {
         pegs = [];
-        const startY = height * 0.15;
-        const spacingY = (height * 0.5) / config.rows;
-        const spacingX = width / (config.rows + 2);
-
-        for (let r = 0; r < config.rows; r++) {
-            const y = startY + r * spacingY;
-            const rowWidth = r * spacingX;
-            const xStart = (width - rowWidth) / 2;
-
-            for (let c = 0; c <= r; c++) {
-                pegs.push({ x: xStart + c * spacingX, y: y });
+        const startY = 80;
+        for (let i = 0; i < config.rows; i++) {
+            const rowY = startY + i * config.spacingY;
+            const rowWidth = i * config.spacingX;
+            const xStart = width / 2 - rowWidth / 2;
+            for (let j = 0; j <= i; j++) {
+                pegs.push({ x: xStart + j * config.spacingX, y: rowY });
             }
         }
     }
 
     class Ball {
         constructor() {
-            this.x = width / 2 + (Math.random() - 0.5);
-            this.y = height * 0.05;
+            this.x = width / 2 + (Math.random() - 0.5) * 2;
+            this.y = 30;
             this.vx = 0;
             this.vy = 0;
-            this.finished = false;
+            this.done = false;
         }
 
         update() {
-            if (this.finished) return;
+            if (this.done) return;
 
             this.vy += config.gravity;
             this.vx *= config.friction;
             this.x += this.vx;
             this.y += this.vy;
 
-            pegs.forEach(peg => {
-                const dx = this.x - peg.x;
-                const dy = this.y - peg.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-
-                if (dist < config.ballRadius + config.pegRadius) {
-                    this.y = peg.y - config.pegRadius; 
-                    this.vy *= -config.elasticity;
-                    
-                    // Logica Gaussiana: forza deviazione binaria
-                    if (Math.abs(dx) < 1) {
-                        this.vx = (Math.random() > 0.5 ? 1.5 : -1.5);
-                    } else {
-                        this.vx = dx * 0.8;
-                    }
+            // Collisione con i pioli
+            for (let p of pegs) {
+                const dx = this.x - p.x;
+                const dy = this.y - p.y;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                
+                if (d < config.ballR + config.pegR) {
+                    // Risoluzione collisione "soft"
+                    const angle = Math.atan2(dy, dx);
+                    // Forza la pallina a cadere o a destra o a sinistra
+                    this.vx = (dx > 0 ? 1 : -1) * (1 + Math.random() * 1);
+                    this.vy *= config.bounce;
+                    this.y = p.y + Math.sin(angle) * (config.ballR + config.pegR);
                 }
-            });
+            }
 
-            const floorY = height * 0.75;
+            // Arrivo nei canali
+            const floorY = height - 160;
             if (this.y > floorY) {
-                this.finished = true;
-                const binWidth = width / (config.rows + 1);
-                let idx = Math.round((this.x - (width/2 - (config.rows * binWidth)/2)) / binWidth);
+                this.done = true;
+                const startX = width / 2 - (config.rows * config.spacingX) / 2;
+                let idx = Math.round((this.x - startX) / config.spacingX);
                 idx = Math.max(0, Math.min(config.rows, idx));
                 buckets[idx]++;
             }
@@ -181,64 +116,55 @@
 
         draw() {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, config.ballRadius, 0, Math.PI * 2);
-            ctx.fillStyle = "#e74c3c";
+            ctx.arc(this.x, this.y, config.ballR, 0, Math.PI*2);
+            ctx.fillStyle = "#ef4444";
             ctx.fill();
-            ctx.closePath();
         }
     }
 
-    function draw() {
+    function animate() {
         ctx.clearRect(0, 0, width, height);
 
-        // Istogramma
-        const binWidth = width / (config.rows + 1);
-        const startX = (width - (config.rows + 1) * binWidth) / 2;
-        const floorY = height * 0.98;
+        // Disegna Istogramma
+        const bW = config.spacingX;
+        const sX = width / 2 - (config.rows * bW) / 2;
+        const maxH = 140;
+        const maxC = Math.max(...buckets, 1);
 
-        for (let i = 0; i < buckets.length; i++) {
-            const h = buckets[i] * 15; // Altezza barre
-            ctx.fillStyle = "#3498db80";
-            ctx.fillRect(startX + i * binWidth + 2, floorY - h, binWidth - 4, h);
-            ctx.strokeStyle = "#eee";
-            ctx.strokeRect(startX + i * binWidth, height * 0.75, binWidth, height * 0.23);
+        for (let i = 0; i <= config.rows; i++) {
+            const h = (buckets[i] / (maxC + 5)) * maxH * 2; // Scala dinamica
+            ctx.fillStyle = "#3b82f6";
+            ctx.fillRect(sX + i * bW - bW/3, height - 20 - h, (bW/3)*2, h);
+            
+            ctx.strokeStyle = "#e2e8f0";
+            ctx.strokeRect(sX + i * bW - bW/2, height - 160, bW, 140);
         }
 
-        // Pioli
-        ctx.fillStyle = "#bdc3c7";
+        // Disegna Pioli
+        ctx.fillStyle = "#94a3b8";
         pegs.forEach(p => {
             ctx.beginPath();
-            ctx.arc(p.x, p.y, config.pegRadius, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, config.pegR, 0, Math.PI*2);
             ctx.fill();
         });
 
-        // Palline
+        // Aggiorna Palline
         balls.forEach((b, i) => {
             b.update();
             b.draw();
-            if (b.finished && b.y > height) balls.splice(i, 1);
+            if (b.done && b.y > height) balls.splice(i, 1);
         });
 
-        requestAnimationFrame(draw);
+        requestAnimationFrame(animate);
     }
 
     function launchBall() { balls.push(new Ball()); }
-    
-    function launchBatch(n) {
-        let count = 0;
-        const int = setInterval(() => {
-            launchBall();
-            count++;
-            if (count >= n) clearInterval(int);
-        }, 100);
+    function launchBatch(n) { 
+        let c = 0;
+        const timer = setInterval(() => { launchBall(); c++; if(c>=n) clearInterval(timer); }, 100);
     }
+    function resetSim() { buckets.fill(0); balls = []; }
 
-    function resetSim() {
-        buckets.fill(0);
-        balls = [];
-    }
-
-    window.addEventListener('resize', init);
     init();
 </script>
 </body>
