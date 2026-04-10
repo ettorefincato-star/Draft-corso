@@ -1,51 +1,86 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import time
 
-st.set_page_config(page_title="Galton Board Simulator", layout="centered")
+st.set_page_config(page_title="Galton Board Dinamica", layout="wide")
 
-st.title("🏗️ Simulatore Galton Board")
-st.markdown("Ogni pallina cade e decide 10 volte se andare a destra (+1) o sinistra (-1).")
+st.title("🏗️ Galton Board: L'Ordine Dinamico")
+st.markdown("Guarda come ogni pallina sceglie il suo percorso. Il caos individuale crea l'ordine collettivo.")
 
-# Controlli per lo studente
-n_balls = st.select_slider(
-    "Quante palline vuoi lanciare?",
-    options=[10, 100, 500, 1000, 5000, 10000],
-    value=500
-)
+# Sidebar per i controlli
+with st.sidebar:
+    st.header("Configurazione")
+    n_balls = st.slider("Numero di palline totali", 10, 500, 100)
+    speed = st.slider("Velocità animazione", 0.01, 0.5, 0.1)
+    if st.button("Lancia le palline!"):
+        st.session_state.run = True
+    else:
+        if 'run' not in st.session_state:
+            st.session_state.run = False
 
-n_layers = 10 # Numero di file di pioli
+# Inizializzazione contenitore per i risultati
+if 'results' not in st.session_state or st.session_state.run:
+    st.session_state.results = []
+    st.session_state.paths = []
 
-# Simulazione del cammino casuale
-# Generiamo una matrice di decisioni (0 o 1)
-data = np.random.randint(0, 2, size=(n_balls, n_layers))
-# Sommiamo le decisioni per vedere dove finisce ogni pallina
-final_positions = np.sum(data, axis=1)
+n_layers = 12
 
-# Calcolo della curva teorica (Normale) per confronto
-x_theory = np.linspace(0, n_layers, 100)
-mu = n_layers / 2
-sigma = np.sqrt(n_layers * 0.25)
-y_theory = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x_theory - mu) / sigma)**2)
+# AREA DELLA SIMULAZIONE
+placeholder = st.empty()
 
-# Grafico
-fig, ax = plt.subplots(figsize=(10, 6))
+if st.session_state.run:
+    for i in range(n_balls):
+        # Generiamo il percorso della singola pallina
+        # 0 = sinistra, 1 = destra
+        steps = np.random.choice([-0.5, 0.5], size=n_layers)
+        path_x = np.cumsum(steps) # Coordinata X che cambia cadendo
+        path_y = np.arange(n_layers, 0, -1) # Coordinata Y che scende
+        
+        # Aggiungiamo il punto di partenza (0, n_layers+1)
+        path_x = np.insert(path_x, 0, 0)
+        path_y = np.insert(path_y, 0, n_layers + 1)
+        
+        st.session_state.results.append(path_x[-1])
+        
+        # Creazione del grafico dinamico con Plotly
+        fig = go.Figure()
 
-# Istogramma delle palline cadute
-counts, bins, _ = ax.hist(final_positions, bins=np.arange(n_layers + 2) - 0.5, 
-                          density=True, color='#1f77b4', alpha=0.7, rwidth=0.8, label="Palline cadute")
+        # Disegniamo i "pioli" (background fisso)
+        for y in range(1, n_layers + 1):
+            row_x = np.arange(-y/2, y/2 + 1, 1)
+            fig.add_trace(go.Scatter(x=row_x, y=[y]*len(row_x), mode='markers', 
+                                     marker=dict(color='gray', size=5), showlegend=False))
 
-# Sovrapponiamo la campana teorica
-ax.plot(x_theory, y_theory, color='#ff7f0e', lw=3, label="Distribuzione Normale (Teoria)")
+        # Disegniamo il percorso della pallina attuale
+        fig.add_trace(go.Scatter(x=path_x, y=path_y, mode='lines+markers',
+                                 line=dict(color='red', width=2), marker=dict(size=8),
+                                 name="Pallina in caduta"))
 
-ax.set_title(f"Distribuzione finale dopo {n_balls} lanci")
-ax.set_xlabel("Posizione finale (Canali)")
-ax.set_ylabel("Frequenza")
-ax.legend()
-ax.grid(axis='y', alpha=0.3)
+        # Disegniamo l'istogramma accumulato in basso
+        if len(st.session_state.results) > 0:
+            fig.add_trace(go.Histogram(x=st.session_state.results, 
+                                       nbinsx=n_layers + 1, 
+                                       marker_color='#1f77b4',
+                                       opacity=0.6,
+                                       name="Distribuzione accumulata",
+                                       yaxis='y2'))
 
-st.pyplot(fig)
+        # Layout del grafico
+        fig.update_layout(
+            xaxis=dict(range=[-n_layers/2 - 1, n_layers/2 + 1], showgrid=False, zeroline=False),
+            yaxis=dict(range=[0, n_layers + 2], showgrid=False, zeroline=False),
+            yaxis2=dict(overlaying='y', side='right', range=[0, n_balls/2], showgrid=False),
+            height=600,
+            template="plotly_white",
+            showlegend=False
+        )
 
-# Messaggio educativo
-st.info(f"Nota come con {n_balls} palline, la forma dei blocchi blu si avvicini sempre di più alla linea arancione. Questo è il passaggio dal caos individuale all'ordine statistico.")
+        placeholder.plotly_chart(fig, use_container_width=True)
+        time.sleep(speed)
+    
+    st.session_state.run = False
+    st.success(f"Simulazione completata con {n_balls} palline!")
+
+else:
+    st.info("Configura il numero di palline nella barra laterale e clicca su 'Lancia le palline!'")
