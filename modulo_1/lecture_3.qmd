@@ -13,3 +13,5 @@ Galton ideò una macchina (la *Galton Board*) per dimostrare che, nonostante ogn
 
 ## Laboratorio Interattivo
 Usa il simulatore qui sotto. Aumenta il numero di palline e osserva come i dati si distribuiscono a campana
+
+https://labgaltonpy-kknb7fjkxqkauuchdvkblp.streamlit.app/
