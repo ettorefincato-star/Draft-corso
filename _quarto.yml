@@ -2,7 +2,7 @@ project:
   type: website
   output-dir: docs
   resources:
-    - "galton_sim.html"
+    - "modulo_1/galton_sim.html"
 
 website:
   title: "Academy Statistica"
