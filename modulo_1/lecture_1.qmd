@@ -15,8 +15,19 @@ Se lanciamo $N$ punti casuali, la frazione di punti che cade nel cerchio appross
 ::: {.callout-tip}
 ## Prova tu stesso!
 Abbiamo preparato un laboratorio interattivo per visualizzare questa simulazione:
-[**Apri il Laboratorio Interattivo**](https://tuo-corso.streamlit.app/lab_montecarlo)
+[**Apri il Laboratorio Interattivo**](https://labmontecarlopy-kruikwaz6izuyclpm7zskm.streamlit.app/)
 :::
+
+## Laboratorio Interattivo
+Usa il simulatore qui sotto per testare i concetti.
+
+```{=html}
+<iframe 
+  src="[https://labmontecarlopy-kruikwaz6izuyclpm7zskm.streamlit.app/](https://labmontecarlopy-kruikwaz6izuyclpm7zskm.streamlit.app/)" 
+  width="100%" 
+  height="700px" 
+  style="border: 2px solid #eee; border-radius: 10px;">
+</iframe>
 
 ## Il Codice della Simulazione
 Ecco la logica semplificata in Python:
