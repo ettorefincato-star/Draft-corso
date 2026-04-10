@@ -8,6 +8,7 @@ website:
     contents:
       - index.qmd
       - modulo_1/lecture_1.qmd
+      - modulo_1/lecture_2.qmd
 
 format:
   html:
