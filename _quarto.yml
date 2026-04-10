@@ -1,6 +1,8 @@
 project:
   type: website
   output-dir: docs
+  resources:
+    - "galton_sim.html"
 
 website:
   title: "Academy Statistica"
